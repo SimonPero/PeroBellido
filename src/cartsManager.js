@@ -83,7 +83,7 @@ export default class CartsManager {
             }
         } catch (error) {
             console.error(`Error al leer el archivo en la ruta ${this.path}: ${error}`);
-            return null;
+            return null; 
         }
     }
 
