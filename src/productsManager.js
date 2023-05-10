@@ -1,8 +1,8 @@
 import fs from 'fs'
 
-class ProductManager {
-    constructor(path) {
-        this.path = path
+export default class ProductManager {
+    constructor() {
+        this.path = "./src/public/productos.json"
         this.products = []
         this.id = 1
         try {
@@ -14,7 +14,7 @@ class ProductManager {
             return `Error reading products file: ${error}`
         }
     }
-    async addProduct(title, description, price, thumbnail, code, stock) {
+    async addProduct(title, description, price, code, stock, category) {
         try {
             if (!fs.existsSync(this.path)) {
                 await fs.promises.writeFile(this.path, '[]');
@@ -23,22 +23,37 @@ class ProductManager {
             let content = JSON.parse(fileContent);
             if (content.some((item) => item.code == code)) {
                 return `Error: Codigo ${code} repetido`;
-            } else if (!title || !description || !price || !thumbnail || !code || !stock) {
+            } else if (!title || !description || !price || !code || !stock || !category) {
+
                 return "Error: todos los campos son requeridos";
-            } else if (isNaN(Number(price)) || isNaN(Number(stock))) {
-                return "Error: price and stock must be valid numbers";
+            } else if (typeof title !== 'string' || typeof description !== 'string' || typeof code !== 'string' || typeof category !== 'string' || isNaN(Number(price)) || isNaN(Number(stock))) {
+                return "Error: title, description, code, and category must be strings; price and stock must be valid numbers; status must be a boolean";
             } else {
-                const product = { title, description, price: Number(price), thumbnail, code, stock: Number(stock), id: this.id };
+                let pid = 0
+                do {
+                    pid = String(Math.round(Math.random() * 100000))
+                } while (content.some((item) => item.id === pid));
+                const product = {
+                    title: String(title),
+                    description: String(description),
+                    price: Number(price),
+                    code: String(code),
+                    stock: Number(stock),
+                    status: Boolean(true),
+                    category: String(category),
+                    id: String(pid),
+                };
                 content.push(product);
-                this.id++;
                 const productsString = JSON.stringify(content);
                 await fs.promises.writeFile(this.path, productsString);
                 return "Producto agregado con exito";
             }
         } catch (error) {
-            console.error(`Error reading file at path ${this.path}: ${error}`);
-            return null;
+            console.log(error);
         }
+    } catch(error) {
+        console.error(`Error reading file at path ${this.path}: ${error}`);
+        return null;
     }
 
     async getProducts() {
@@ -87,10 +102,12 @@ class ProductManager {
             if (
                 product === undefined ||
                 Object.keys(product).length < 6 ||
-                otherProducts.some((item) => item.code === toUpdate.code)
+                otherProducts.some((item) => item.code === toUpdate.code ||
+                    toUpdate.hasOwnProperty("status") ||
+                    toUpdate.hasOwnProperty("id"))
             ) {
                 return (
-                    "no hay ningun objeto con esta id, estas intentando añadir más campos de los permitidos o el codigo es el mismo al de otr producto"
+                    "no hay ningun objeto con esta id, estas intentando añadir más campos de los permitidos, el codigo es el mismo al de otr producto, o estas intentando cambiar campos intocables."
                 );
             } else {
                 let toUpdateKeys = Object.keys(toUpdate);
@@ -99,11 +116,6 @@ class ProductManager {
                 for (const item of content) {
                     productsIds.push(item.id);
                 }
-                let newId = 0;
-                do {
-                    newId = Math.round(Math.random() * 100);
-                } while (productsIds.includes(newId));
-                product.id = newId;
                 for (let i = 0; i < productKeys.length; i++) {
                     if (productKeys.includes(toUpdateKeys[i])) {
                         product[toUpdateKeys[i]] = toUpdate[toUpdateKeys[i]];
@@ -142,9 +154,5 @@ class ProductManager {
         }
     }
 }
-
-//module.exports = ProductManager
-export default ProductManager
-
 
 
